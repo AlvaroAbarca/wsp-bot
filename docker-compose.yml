@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  web:
+    build: ./app
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./app/:/app/
+    ports:
+      - 8000:8000
+    env_file:
+      - ./.env.dev
+    depends_on:
+      - db
+  worker:
+    build: ./app
+    command: celery -A wsp_bot worker --beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    volumes:
+      - ./app/:/app/
+    env_file:
+      - ./.env.dev
+    depends_on:
+      - db
+
+  rabbitmq:
+    container_name: rabbitmq
+    restart: always
+    image: rabbitmq:3.9-alpine
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=rabbit_user
+      - RABBITMQ_DEFAULT_PASS=rabbit_password
+    expose:
+      - 15672
+      - 5672
+
+  db:
+    image: postgres:13.0-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=hello_django
+      - POSTGRES_PASSWORD=hello_django
+      - POSTGRES_DB=hello_django_dev
+
+  # openwa:
+  #   image: openwa/wa-automate
+  #   volumes:
+  #     - openwa_data:/usr/src/app/
+  #   # init: true
+  #   ports:
+  #     - 8081:8080
+  #   environment:
+  #     - api-host=http://openwa:8081
+
+  # chrome:
+  #   image: selenium/standalone-chrome:4.9.0-20230421
+  #   shm_size: 2gb
+  #   depends_on:
+  #     - selenium-hub
+  #   environment:
+  #     - SE_EVENT_BUS_HOST=selenium-hub
+  #     - SE_EVENT_BUS_PUBLISH_PORT=4442
+  #     - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  # openwa_data:
